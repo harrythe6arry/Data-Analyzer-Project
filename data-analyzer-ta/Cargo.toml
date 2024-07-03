@@ -4,4 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-serde = { version = "1.0", features = ["derive"], optional = true }
+ta = "0.5.0"  # replace with the actual version you're using
+csv = "1.1"  # replace with the actual version you're using
+serde = { version = "1.0", features = ["derive"] }
+

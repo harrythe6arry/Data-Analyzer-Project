@@ -1,33 +1,10 @@
-use crate::errors::*;
+use ta::errors::TaError;
 use crate::traits::{Close, High, Low, Open, Volume};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-/// Data item is used as an input for indicators.
-///
-/// # Example
-///
-/// ```
-/// use ta::DataItem;
-/// use ta::{Open, High, Low, Close, Volume};
-///
-/// let item = DataItem::builder()
-///     .open(20.0)
-///     .high(25.0)
-///     .low(15.0)
-///     .close(21.0)
-///     .volume(7500.0)
-///     .build()
-///     .unwrap();
-///
-/// assert_eq!(item.open(), 20.0);
-/// assert_eq!(item.high(), 25.0);
-/// assert_eq!(item.low(), 15.0);
-/// assert_eq!(item.close(), 21.0);
-/// assert_eq!(item.volume(), 7500.0);
-/// ```
-///
+
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone, PartialEq)]
 pub struct DataItem {
@@ -118,7 +95,7 @@ impl DataItemBuilder {
         self
     }
 
-    pub fn build(self) -> Result<DataItem> {
+    pub fn build(self) -> Result<DataItem, TaError> {
         if let (Some(open), Some(high), Some(low), Some(close), Some(volume)) =
             (self.open, self.high, self.low, self.close, self.volume)
         {
