@@ -5,6 +5,6 @@ This is my project for data analyzer. List Indicators that will covered in this 
 # Run the Project
 <div style="background-color: rgb(50, 50, 50);">
 
-``python
+``
 cargo run --bin "data-analyzer-ta"
 ``
