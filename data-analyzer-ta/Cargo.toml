@@ -16,5 +16,7 @@ tokio-util = { version = "0.7.11", features = ["compat"] }
 futures = "0.3"
 csv-txt-excel-parallel-toolkit = "0.4.7"
 anyhow = "1.0"
+crossbeam = "0.8.4"
 rayon = "1.5.1"
+
 

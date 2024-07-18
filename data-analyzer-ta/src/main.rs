@@ -20,19 +20,35 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Err(e) => eprintln!("Error getting current directory: {}", e),
     }
 
-    let file_path = "./examples/data/large_dataset.csv";
-    let start_date = NaiveDate::from_ymd(2024, 1, 1); // Define a start date
+    let file_path = "./examples/data/superlarge_dataset.csv";
+    let start_date_par = NaiveDate::from_ymd(0, 1, 1); // Define a start date
 
-    // Parallel processing with timing
-    let rt = tokio::runtime::Runtime::new()?;
     let start = Instant::now();
-    let (par_dates, par_closing_prices, par_ema_values) = rt.block_on(read_and_process_csv_parallel(file_path, start_date))?;
+        // let (par_dates, par_closing_prices, par_ema_values) = 
+        // read_and_process_csv_parallel(file_path, start_date_par,1024 as usize)?;
+        // let (par_dates, par_closing_prices, par_ema_values) = 
+        // read_and_process_csv_parallel(file_path, start_date_par, 1024 as usize)?;
+        // let (par_dates, par_closing_prices, par_ema_values) = 
+        // read_and_process_csv_parallel(file_path, start_date_par, 1024 as usize)?;
+        // let (par_dates, par_closing_prices, par_ema_values) = 
+        // read_and_process_csv_parallel(file_path, start_date_par, 1024 as usize)?;
+        let (par_dates, par_closing_prices, par_ema_values) = 
+        read_and_process_csv_parallel(file_path, start_date_par, 1024  as usize)?;
     let duration_parallel = start.elapsed();
 
     // Sequential processing with timing
+    let start_date_seq = NaiveDate::from_ymd(0, 1, 1); // Define a start date
     let start = Instant::now();
-    let (seq_dates, seq_closing_prices, seq_ema_values) =
-        read_and_process_csv_sequential(file_path, start_date)?;
+        // let (seq_dates, seq_closing_prices, seq_ema_values) =
+        //     read_and_process_csv_sequential(file_path, start_date_seq)?;
+        // let (seq_dates, seq_closing_prices, seq_ema_values) =
+        // read_and_process_csv_sequential(file_path, start_date_seq)?;
+        // let (seq_dates, seq_closing_prices, seq_ema_values) =
+        // read_and_process_csv_sequential(file_path, start_date_seq)?;
+        // let (seq_dates, seq_closing_prices, seq_ema_values) =
+        // read_and_process_csv_sequential(file_path, start_date_seq)?;
+        let (seq_dates, seq_closing_prices, seq_ema_values) =
+        read_and_process_csv_sequential(file_path, start_date_seq)?;
     let duration_sequential = start.elapsed();
 
 
@@ -49,10 +65,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // // Print the duration of each process
     println!("Sequential processing took: {:?}", duration_sequential);
     println!("Parallel processing took: {:?}", duration_parallel);
-    // Plot the data for sequential (just an example, adjust as needed)
-    // plot_ema(&seq_dates, &seq_closing_prices, &seq_ema_values)?;
     
+
+    // plot_ema(&seq_dates, &seq_closing_prices, &seq_ema_values)?;
+    // par_plot_ema(&par_dates, &par_closing_prices, &par_ema_values)?;
+    
+
+
+
     Ok(())
+
 }
 
 
@@ -93,6 +115,42 @@ fn plot_ema(dates: &[String], closing_prices: &[f64], ema_values: &[f64]) -> Res
 }
 
 
+
+fn par_plot_ema(dates: &[String], closing_prices: &[f64], ema_values: &[f64]) -> Result<(), Box<dyn std::error::Error>> {
+    let root_area = BitMapBackend::new("plotted_image_par.png", (50000, 3500)).into_drawing_area();
+    root_area.fill(&WHITE)?;
+
+    let mut chart = ChartBuilder::on(&root_area)
+        .caption("Exponential Moving Average", ("Calibri", 600, &BLACK).into_text_style(&root_area))
+        .margin(100)
+        .x_label_area_size(70)
+        .y_label_area_size(65)
+        .build_cartesian_2d(0..dates.len(), *closing_prices.iter()
+        .min_by(|a, b| a.partial_cmp(b).unwrap()).unwrap()..*closing_prices
+        .iter().max_by(|a, b| a.partial_cmp(b).unwrap()).unwrap())?;
+
+    chart.configure_mesh().draw()?;
+
+    chart.draw_series(LineSeries::new(
+        dates.iter().enumerate().map(|(idx, _)| (idx, closing_prices[idx])),
+        *&RED.stroke_width(3),
+    ))?.label("Price Line")
+    .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &RED));
+
+    chart.draw_series(LineSeries::new(
+        dates.iter().enumerate().map(|(idx, _)| (idx, ema_values[idx])),
+        *&BLUE.stroke_width(3),
+    ))?.label("EMA")
+    .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &BLUE));
+
+    chart.configure_series_labels()
+        .position(SeriesLabelPosition::UpperLeft)
+        .background_style(&WHITE.mix(0.8))
+        .border_style(&BLACK)
+        .draw()?;
+
+    Ok(())
+}
 
 
 

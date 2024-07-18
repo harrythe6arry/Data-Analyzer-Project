@@ -1,15 +1,12 @@
 use crate::indicator::ExponentialMovingAverage as Ema;
-use crate::data_item::DataItem;
 use crate::traits::{Close, Next};
-use csv_async::AsyncReaderBuilder;
-use futures::StreamExt;
+use csv::ReaderBuilder;
 use serde::Deserialize;
-use std::{
-    error::Error,
-    sync::{Arc, Mutex},
-};
-use tokio::task;
-use tokio_util::compat::TokioAsyncReadCompatExt;
+use std::error::Error;
+use crate::data_item::DataItem;
+use rayon::prelude::*;
+use std::fs::File;
+use std::io::BufReader;
 
 #[derive(Debug, Deserialize)]
 struct Record {
@@ -20,96 +17,72 @@ struct Record {
     volume: f64,
 }
 
-pub async fn read_and_process_csv_parallel(
-    file_path: &str,
+fn process_chunk(
+    chunk: &[Record],
     start_date: chrono::NaiveDate,
-) -> Result<(Vec<String>, Vec<f64>, Vec<f64>), Box<dyn Error>> {
-    let file = tokio::fs::File::open(file_path).await?;
-    let file = file.compat();
-    let mut reader = AsyncReaderBuilder::new()
-        .has_headers(true)
-        .create_deserializer(file);
+    chunk_index: usize,
+    chunk_size: usize,
+) -> (Vec<String>, Vec<f64>, Vec<f64>) {
+    let mut dates = Vec::new();
+    let mut closing_prices = Vec::new();
+    let mut ema_values = Vec::new();
 
-    let ema = Arc::new(Mutex::new(Ema::new(25)?));
+    let mut ema = Ema::new(25).unwrap();
 
-    // using the Arc and Mutex to share the data between tasks
-    let dates = Arc::new(Mutex::new(vec![]));
-    let closing_prices = Arc::new(Mutex::new(vec![]));
-    let ema_values = Arc::new(Mutex::new(vec![]));
+    for (i, record) in chunk.iter().enumerate() {
+        let date = start_date + chrono::Duration::days((chunk_index * chunk_size + i) as i64);
+        dates.push(date.to_string());
+        closing_prices.push(record.close);
 
-    let mut records = reader.deserialize::<Record>();
+        let dt = DataItem::builder()
+            .open(record.open)
+            .high(record.high)
+            .low(record.low)
+            .close(record.close)
+            .volume(record.volume)
+            .build()
+            .unwrap();
 
-    while let Some(result) = records.next().await {
-        let record: Record = match result {
-            Ok(record) => record,
-            Err(e) => {
-                eprintln!("Error reading record: {}", e);
-                continue;
-            }
-        };
-
-        let ema = Arc::clone(&ema);
-        let dates = Arc::clone(&dates);
-        let closing_prices = Arc::clone(&closing_prices);
-        let ema_values = Arc::clone(&ema_values);
-
-        task::spawn(async move {
-            let i = match dates.lock() {
-                Ok(mut dates) => {
-                    let i = dates.len();
-                    let date = start_date + chrono::Duration::days(i as i64);
-                    dates.push(date.to_string());
-                    i
-                }
-                Err(poisoned) => {
-                    eprintln!("Mutex poisoned: {:?}", poisoned);
-                    return;
-                }
-            };
-
-            if let Err(poisoned) = closing_prices.lock().map(|mut cp| cp.push(record.close)) {
-                eprintln!("Mutex poisoned: {:?}", poisoned);
-                return;
-            }
-
-            let dt = match DataItem::builder()
-                .open(record.open)
-                .high(record.high)
-                .low(record.low)
-                .close(record.close)
-                .volume(record.volume)
-                .build()
-            {
-                Ok(dt) => dt,
-                Err(e) => {
-                    eprintln!("Error creating DataItem: {}", e);
-                    return;
-                }
-            };
-
-            let ema_val = match ema.lock() {
-                Ok(mut ema) => ema.next(&dt),
-                Err(poisoned) => {
-                    eprintln!("Mutex poisoned: {:?}", poisoned);
-                    return;
-                }
-            };
-
-            if let Err(poisoned) = ema_values.lock().map(|mut ev| ev.push(ema_val)) {
-                eprintln!("Mutex poisoned: {:?}", poisoned);
-                return;
-            }
-
-            // println!("{}: {} = {:2.2}", start_date + chrono::Duration::days(i as i64), "EMA", ema_val);
-        });
+        let ema_val = ema.next(&dt);
+        ema_values.push(ema_val);
     }
 
-    // Wait for all tasks to complete
-    tokio::task::yield_now().await;
+    (dates, closing_prices, ema_values)
+}
 
-    let dates = Arc::try_unwrap(dates).unwrap().into_inner().unwrap();
-    let closing_prices = Arc::try_unwrap(closing_prices).unwrap().into_inner().unwrap();
-    let ema_values = Arc::try_unwrap(ema_values).unwrap().into_inner().unwrap();
+pub fn read_and_process_csv_parallel(
+    file_path: &str,
+    start_date: chrono::NaiveDate,
+    chunk_size: usize,
+) -> Result<(Vec<String>, Vec<f64>, Vec<f64>), Box<dyn Error>> {
+    let file = File::open(file_path)?;
+    let reader = BufReader::new(file);
+    let mut csv_reader = ReaderBuilder::new().has_headers(true).from_reader(reader);
 
-    Ok((dates, closing_prices, ema_values))
+    let mut records = Vec::new();
+    for result in csv_reader.deserialize::<Record>() {
+        let record: Record = result?;
+        records.push(record);
+    }   
+
+    let chunks: Vec<_> = records.chunks(chunk_size).collect();
+
+    let results: Vec<_> = chunks
+        .par_iter()
+        .enumerate()
+        .map(|(i, chunk)| process_chunk(chunk, start_date, i, chunk_size))
+        .collect();
+
+    
+    let mut date_res = Vec::new();
+    let mut cp_res = Vec::new();
+    let mut ema_val_res = Vec::new();
+
+    results.iter().for_each(|(dates, closing_prices, ema_values)| {
+        date_res.extend(dates.iter().cloned());
+        cp_res.extend(closing_prices.iter().cloned());
+        ema_val_res.extend(ema_values.iter().cloned());
+    });
+
+    Ok((date_res, cp_res, ema_val_res))
 }

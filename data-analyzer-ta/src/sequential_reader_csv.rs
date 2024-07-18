@@ -12,6 +12,7 @@ use std::{
     error::Error,
 };
 
+
 #[derive(Debug, Deserialize)]
 struct Record {
     open: f64,
@@ -33,7 +34,9 @@ pub fn read_and_process_csv_sequential(
     let mut closing_prices = vec![];
     let mut ema_values = vec![];
 
-    for (i, result) in csv_reader.deserialize().enumerate() {
+    let csv_desir = csv_reader.deserialize(); 
+
+    for (i, result) in csv_desir.enumerate() {
         let record: Record = result?;
 
         let date = start_date + chrono::Duration::days(i as i64);
