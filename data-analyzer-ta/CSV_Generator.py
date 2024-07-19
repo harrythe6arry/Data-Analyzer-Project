@@ -55,6 +55,19 @@ print("CSV file 'large_dataset.csv' created successfully!")
 # Sequential processing took: 89.878101833s
 # Parallel processing took: 77.100826334s
 
+#2: largeDataset
+# Current directory: /Users/harrysingh/Library/Mobile Documents/com~apple~CloudDocs/Desktop/CS_101/uni/yr2/Term 3 2023/funpar/FunPar-Project/data-analyzer-ta
+# Sequential Results:
+# Dates: 30000000
+# Closing Prices: 30000000
+# EMA Values: 30000000
+# Parallel Results:
+# Dates: 30000000
+# Closing Prices: 30000000
+# EMA Values: 30000000
+# Sequential processing took: 90.636762833s
+# Parallel processing took: 76.066746583s
+
 
 #2: Dataset: superlarge_dataset
 # Current directory: /Users/harrysingh/Library/Mobile Documents/com~apple~CloudDocs/Desktop/CS_101/uni/yr2/Term 3 2023/funpar/FunPar-Project/data-analyzer-ta
@@ -68,6 +81,8 @@ print("CSV file 'large_dataset.csv' created successfully!")
 # EMA Values: 50000000
 # Sequential processing took: 150.332246375s
 # Parallel processing took: 129.129155416s
+
+
 
 
 

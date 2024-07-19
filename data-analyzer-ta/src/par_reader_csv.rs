@@ -30,7 +30,7 @@ fn process_chunk(
     let mut ema = Ema::new(25).unwrap();
 
     for (i, record) in chunk.iter().enumerate() {
-        let date = start_date + chrono::Duration::days((chunk_index * chunk_size + i) as i64);
+        let date = start_date + chrono::Duration::days(i as i64);
         dates.push(date.to_string());
         closing_prices.push(record.close);
 
@@ -60,6 +60,7 @@ pub fn read_and_process_csv_parallel(
     let mut csv_reader = ReaderBuilder::new().has_headers(true).from_reader(reader);
 
     let mut records = Vec::new();
+    
     for result in csv_reader.deserialize::<Record>() {
         let record: Record = result?;
         records.push(record);
@@ -78,6 +79,7 @@ pub fn read_and_process_csv_parallel(
     let mut cp_res = Vec::new();
     let mut ema_val_res = Vec::new();
 
+    
     results.iter().for_each(|(dates, closing_prices, ema_values)| {
         date_res.extend(dates.iter().cloned());
         cp_res.extend(closing_prices.iter().cloned());

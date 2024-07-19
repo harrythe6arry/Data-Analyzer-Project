@@ -9,7 +9,7 @@ mod errors;
 
 use plotters::prelude::*;
 use std::{env, process, time::Instant};
-use chrono::NaiveDate;
+use chrono::{naive::NaiveDateDaysIterator, NaiveDate};
 use par_reader_csv::read_and_process_csv_parallel;
 use sequential_reader_csv::read_and_process_csv_sequential;
 
@@ -21,32 +21,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let file_path = "./examples/data/superlarge_dataset.csv";
-    let start_date_par = NaiveDate::from_ymd(0, 1, 1); // Define a start date
+    let start_date_par = NaiveDate::from_ymd(0, 1, 1); 
 
     let start = Instant::now();
-        // let (par_dates, par_closing_prices, par_ema_values) = 
-        // read_and_process_csv_parallel(file_path, start_date_par,1024 as usize)?;
-        // let (par_dates, par_closing_prices, par_ema_values) = 
-        // read_and_process_csv_parallel(file_path, start_date_par, 1024 as usize)?;
-        // let (par_dates, par_closing_prices, par_ema_values) = 
-        // read_and_process_csv_parallel(file_path, start_date_par, 1024 as usize)?;
-        // let (par_dates, par_closing_prices, par_ema_values) = 
-        // read_and_process_csv_parallel(file_path, start_date_par, 1024 as usize)?;
+
+        println!("Reading and processing the CSV file in parallel...");
+     
         let (par_dates, par_closing_prices, par_ema_values) = 
         read_and_process_csv_parallel(file_path, start_date_par, 1024  as usize)?;
     let duration_parallel = start.elapsed();
 
     // Sequential processing with timing
-    let start_date_seq = NaiveDate::from_ymd(0, 1, 1); // Define a start date
+    let start_date_seq = NaiveDate::from_ymd(0, 1, 1);
     let start = Instant::now();
-        // let (seq_dates, seq_closing_prices, seq_ema_values) =
-        //     read_and_process_csv_sequential(file_path, start_date_seq)?;
-        // let (seq_dates, seq_closing_prices, seq_ema_values) =
-        // read_and_process_csv_sequential(file_path, start_date_seq)?;
-        // let (seq_dates, seq_closing_prices, seq_ema_values) =
-        // read_and_process_csv_sequential(file_path, start_date_seq)?;
-        // let (seq_dates, seq_closing_prices, seq_ema_values) =
-        // read_and_process_csv_sequential(file_path, start_date_seq)?;
+        println!("Reading and processing the CSV file sequentially...");
         let (seq_dates, seq_closing_prices, seq_ema_values) =
         read_and_process_csv_sequential(file_path, start_date_seq)?;
     let duration_sequential = start.elapsed();
@@ -66,13 +54,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Sequential processing took: {:?}", duration_sequential);
     println!("Parallel processing took: {:?}", duration_parallel);
     
+    // Plotting graphs for small datasets 
 
     // plot_ema(&seq_dates, &seq_closing_prices, &seq_ema_values)?;
     // par_plot_ema(&par_dates, &par_closing_prices, &par_ema_values)?;
     
-
-
-
     Ok(())
 
 }
